@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Мой Мессенджер</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial; margin: 0; padding: 20px; background: #f0f2f5; }
+        #messages { height: 70vh; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: white; }
+        .message { margin: 10px 0; padding: 10px; border-radius: 10px; }
+        .my-message { background: #0084ff; color: white; text-align: right; }
+        .other-message { background: #e4e6eb; }
+        #messageInput { width: 80%; padding: 10px; }
+        button { padding: 10px 20px; background: #0084ff; color: white; border: none; border-radius: 5px; }
+        #login { text-align: center; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div id="login">
+        <h2>Вход в мессенджер</h2>
+        <input type="text" id="username" placeholder="Ваше имя">
+        <input type="text" id="githubToken" placeholder="GitHub Token">
+        <button onclick="login()">Войти</button>
+    </div>
+
+    <div id="chat" style="display:none;">
+        <div id="messages"></div>
+        <input type="text" id="messageInput" placeholder="Введите сообщение...">
+        <button onclick="sendMessage()">Отправить</button>
+    </div>
+
+    <script>
+        const REPO_OWNER = 'ВАШ_GITHUB_НИК';
+        const REPO_NAME = 'my-messenger';
+        let currentUser = '';
+        let githubToken = '';
+
+        function login() {
+            currentUser = document.getElementById('username').value;
+            githubToken = document.getElementById('githubToken').value;
+            document.getElementById('login').style.display = 'none';
+            document.getElementById('chat').style.display = 'block';
+            loadMessages();
+            setInterval(loadMessages, 3000); // Обновление каждые 3 секунды
+        }
+
+        async function loadMessages() {
+            const response = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/issues?state=open`);
+            const issues = await response.json();
+            
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = '';
+            
+            issues.forEach(issue => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message ' + (issue.title.includes(currentUser) ? 'my-message' : 'other-message');
+                messageDiv.innerHTML = `<strong>${issue.user.login}:</strong> ${issue.body}`;
+                messagesDiv.appendChild(messageDiv);
+            });
+        }
+
+        async function sendMessage() {
+            const message = document.getElementById('messageInput').value;
+            if (!message) return;
+
+            const response = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/issues`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `token ${githubToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: `Message from ${currentUser}`,
+                    body: message
+                })
+            });
+
+            document.getElementById('messageInput').value = '';
+            loadMessages();
+        }
+    </script>
+</body>
+</html>
